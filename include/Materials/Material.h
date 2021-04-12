@@ -5,15 +5,16 @@
 #ifndef RAYTRACING_MATERIAL_H
 #define RAYTRACING_MATERIAL_H
 
-#include "../VecFunctions.h"
+#include "../math/VecFunctions.h"
 #include "../Color.h"
 
 class Material {
 public:
     double albedo;
+    double diff_k;
     Color col;
 
-    Material(Color _col, double _albedo) : col(_col), albedo(_albedo) {}
+    Material(Color _col, double _albedo, double _diff_k) : col(_col), albedo(_albedo), diff_k(_diff_k) {}
 
     virtual Color color(vec3 hit) {
         return col;

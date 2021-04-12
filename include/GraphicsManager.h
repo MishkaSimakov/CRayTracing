@@ -3,12 +3,12 @@
 #ifndef RAYTRACING_GRAPHICSMANAGER_H
 #define RAYTRACING_GRAPHICSMANAGER_H
 
-#include "iostream"
 #include "variables.h"
+
 
 class GraphicsManager {
 public:
-    const int width, height;
+    int width, height;
     sf::RenderWindow &window;
 
     GraphicsManager(sf::RenderWindow &_window, int _width, int _height)
@@ -55,7 +55,7 @@ public:
     };
 
     Color castRay(vec3 ro, vec3 rd, int depth = 0) {
-        if (depth > recursion_limit) return sky_color;
+        if (depth > recursion_limit) return sky.color(rd);
 
         double min_it = max_distance;
         char min_it_index = -1;
@@ -74,6 +74,7 @@ public:
             Shape *shape = shapes[min_it_index];
 
             vec3 reflection_o = ro + rd * (min_it - 1e-3);
+            vec3 reflection_d = shape->reflect(reflection_o, rd);
 
             double diffuse_light_intensity = 0;
 
@@ -85,10 +86,10 @@ public:
             }
 
             return shape->material->color(reflection_o) * diffuse_light_intensity +
-                   castRay(reflection_o, shape->reflect(reflection_o, rd), depth + 1) * shape->material->albedo;
+                   castRay(reflection_o, reflection_d, depth + 1) * shape->material->albedo;
         }
 
-        return sky_color;
+        return sky.color(rd);
     };
 };
 

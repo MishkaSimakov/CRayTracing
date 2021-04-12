@@ -9,7 +9,7 @@
 
 class ChessMaterial : public Material {
 public:
-    ChessMaterial() : Material(Color(0), 0.25) {}
+    ChessMaterial() : Material(Color(0), 0.25, 1) {}
 
     Color color(vec3 hit) override {
         int sum = hit.x + hit.y + hit.z;
