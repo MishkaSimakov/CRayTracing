@@ -11,4 +11,6 @@ struct vec2
     vec2 operator-(vec2 other) { return vec2(x - other.x, y - other.y); }
     vec2 operator/(vec2 other) { return vec2(x / other.x, y / other.y); }
     vec2 operator*(vec2 other) { return vec2(x * other.x, y * other.y); }
+
+    vec2 operator-() { return vec2(-x, -y); }
 };

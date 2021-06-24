@@ -15,10 +15,16 @@ struct vec3
     vec3 operator*(vec3 other) { return vec3(x * other.x, y * other.y, z * other.z); }
     vec3 operator/(vec3 other) { return vec3(x / other.x, y / other.y, z / other.z); }
 
+    void operator+=(vec3 other) { x += other.x; y += other.y; z += other.z; }
+
     vec3 operator-() { return vec3(-x, -y, -z); }
 
     bool operator!=(vec3 other) { return x != other.x or y != other.y or z != other.z; }
-
-
-    vec2 xy() { return vec2(x, y); }
+    bool operator==(vec3 other) { return x == other.x and y == other.y and z == other.z; }
 };
+
+std::ostream & operator<<(std::ostream & os, const vec3 & v)
+{
+    os << v.x << " " << v.y << " " << v.z;
+    return os;
+}

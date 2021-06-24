@@ -8,8 +8,9 @@
 class Sphere : public Shape {
 public:
     double radius; // square of radius
+    vec3 pos;
 
-    Sphere(vec3 _pos, double _radius, Material *_material) : Shape(_pos, _material), radius(_radius * _radius) {};
+    Sphere(vec3 _pos, double _radius, Material *_material) : Shape(_material), pos(_pos), radius(_radius * _radius) {};
 
     double intersection(vec3 ro, vec3 rd) override {
         vec3 oc = ro - pos;

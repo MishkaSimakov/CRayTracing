@@ -3,31 +3,30 @@
 #ifndef RAYTRACING_SHAPE_H
 #define RAYTRACING_SHAPE_H
 
-#include "../math/VecFunctions.h"
-#include "SFML/Graphics.hpp"
-#include "../Color.h"
+#include "../Math/VecFunctions.h"
 #include "../Materials/Material.h"
 
 class Shape {
 public:
-    vec3 pos;
     Material *material;
 
-    Shape(vec3 _pos, Material *_material) : pos(_pos), material(_material) {};
+    Shape(Material *_material) : material(_material) {}
 
-    virtual double intersection(vec3 ro, vec3 rd) {};
+    virtual double intersection(vec3 ro, vec3 rd) {
+        return -1.0;
+    }
 
-    virtual vec3 normal(vec3 hit) {};
-
-    void move(vec3 offset) {
-        pos = pos + offset;
+    virtual vec3 normal(vec3 hit) {
+        return norm(-hit);
     }
 
     vec3 reflect(vec3 hit, vec3 rd) {
-        return mix(
-                reflect_d(hit) * material->diff_k,
-                reflect_m(hit, rd) * (1 - material->diff_k)
-        );
+//        return mix(
+//                reflect_d(hit) * material->diff_k,
+//                reflect_m(hit, rd) * (1 - material->diff_k)
+//        );
+
+        return reflect_m(hit, rd);
     }
 
     vec3 reflect_m(vec3 hit, vec3 rd) {
@@ -42,11 +41,17 @@ public:
     vec3 reflect_d(vec3 hit) {
         vec3 N = normal(hit);
 
-        vec3 rand = norm(vec3(
-                (std::rand() % 100) / 50 - 1,
-                (std::rand() % 100) / 50 - 1,
-                (std::rand() % 100) / 50 - 1
-            ));
+        double theta = std::rand() % 629 / 100; // random in [0, two_pi]
+        double v = std::rand() % 1001 / 1000; // random in [0, 1]
+        double phi = acos((2 * v) - 1);
+
+        double a = std::rand() % 1001 / 1000;
+        double r = pow(a, 1/3);
+        double x = r * sin(phi) * cos(theta);
+        double y = r * sin(phi) * sin(theta);
+        double z = r * cos(phi);
+
+        vec3 rand = vec3(x, y, z);
 
         if (dot(rand, N) < 0) return -rand;
 

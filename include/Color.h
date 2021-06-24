@@ -3,7 +3,7 @@
 #ifndef RAYTRACING_COLOR_H
 #define RAYTRACING_COLOR_H
 
-#include "math/Vec3.h"
+#include "Math/Vec3.h"
 #include "SFML/Graphics.hpp"
 
 class Color {

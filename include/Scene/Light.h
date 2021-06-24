@@ -19,9 +19,7 @@ public:
         double h = b * b - dot(oc, oc) + radius;
 
         if (h < 0.0) return -1.0; // no intersection
-        h = sqrt(h);
-
-        return -b - h;
+        return 1.0;
     }
 };
 

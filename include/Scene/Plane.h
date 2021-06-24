@@ -5,16 +5,21 @@
 
 class Plane : public Shape {
 public:
-    vec3 n;
+    vec3 planeNormal;
+    double D;
 
-    Plane(vec3 _pos, vec3 _normal, Material *_material) : Shape(_pos, _material), n(_normal) {};
+    Plane(double _D, vec3 _normal, Material *_material) : Shape(_material), planeNormal(_normal), D(_D) {};
 
     double intersection(vec3 ro, vec3 rd) override {
-        return -(dot(ro, n) + pos.z) / dot(rd, n);
+        double d = dot(rd, planeNormal);
+
+        if (d >= 0) return -1;
+
+        return -(dot(ro, planeNormal) + D) / d;
     }
 
     vec3 normal(vec3 hit) override {
-        return n;
+        return planeNormal;
     }
 };
 

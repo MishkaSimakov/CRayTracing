@@ -4,93 +4,143 @@
 #define RAYTRACING_GRAPHICSMANAGER_H
 
 #include "variables.h"
+#include "thread"
+
+struct intersectionInfo {
+    double distance;
+    Shape *shape;
+
+    intersectionInfo(double _distance, Shape *_shape) : distance(_distance), shape(_shape) {};
+};
 
 
 class GraphicsManager {
 public:
     int width, height;
-    sf::RenderWindow &window;
 
-    GraphicsManager(sf::RenderWindow &_window, int _width, int _height)
-            : window(_window),
-              width(_width),
+    GraphicsManager(int _width, int _height)
+            : width(_width),
               height(_height) {};
 
-    void draw() {
-        auto pixels = new sf::Uint8[width * height * 4];
+    auto draw(int samples) {
+        auto pixels = new sf::Uint8[WIDTH * HEIGHT * 3];
+
+        vec2 size(WIDTH, HEIGHT);
 
         vec3 ro(0);
         vec3 rd(0);
-        Color col(0);
-
-        vec2 size(width, height);
+        vec3 color(0);
 
         int pos;
 
-        for (int x = 0; x < width; ++x) {
-            for (int y = 0; y < height; ++y) {
-                ro = camera.pos;
-                rd = norm(camera.getDirection(vec2(x, y), size));
+        std::vector<std::thread> threads;
 
-                col = castRay(ro, rd) * 255;
+        std::cout << "Start rendering..." << std::endl;
 
-                pos = (y * width + x) * 4;
-                pixels[pos] = (col.r > 255) ? 255 : (unsigned char) (col.r);
-                pixels[pos + 1] = (col.g > 255) ? 255 : (unsigned char) (col.g);
-                pixels[pos + 2] = (col.b > 255) ? 255 : (unsigned char) (col.b);
-                pixels[pos + 3] = 255;
+        for (int sample = 0; sample < samples; ++sample) {
+            for (int x = 0; x < WIDTH; ++x) {
+                for (int y = 0; y < HEIGHT; ++y) {
+                    ro = camera.pos;
+                    rd = camera.getDirection(vec2(x, y), size);
+
+                    color = castRay(ro, rd) * 255;
+
+                    vec3 new_col = vec3(
+                            (color.x > 255) ? 255 : color.x,
+                            (color.y > 255) ? 255 : color.y,
+                            (color.z > 255) ? 255 : color.z
+                    );
+
+                    pos = (y * WIDTH + x) * 3;
+                    pixels[pos] = (unsigned int) ((new_col.x + pixels[pos] * sample) / (sample + 1));
+                    pixels[pos + 1] = (unsigned int) ((new_col.y + pixels[pos + 1] * sample) / (sample + 1));
+                    pixels[pos + 2] = (unsigned int) ((new_col.z + pixels[pos + 2] * sample) / (sample + 1));
+                }
             }
+
+            std::cout << "Rendered " << sample + 1 << " / " << samples << std::endl;
         }
 
-        sf::Texture texture;
-        texture.create(width, height);
-
-        texture.update(pixels);
-
-        sf::Sprite sprite;
-        sprite.setTexture(texture);
-
-        window.clear();
-        window.draw(sprite);
+        return pixels;
     };
 
-    Color castRay(vec3 ro, vec3 rd, int depth = 0) {
-        if (depth > recursion_limit) return sky.color(rd);
+    vec3 castRay(vec3 ro, vec3 rd, int depth = 0) {
+        if (depth > recursion_limit) return 0;
 
-        double min_it = max_distance;
-        char min_it_index = -1;
+        intersectionInfo intersection = getClosestIntersection(ro, rd);
 
-        for (char i = 0; i < shapes.size(); ++i) {
-            double it = shapes[i]->intersection(ro, rd);
-
-            if (it < 0) continue;
-            if (it < min_it) {
-                min_it = it;
-                min_it_index = i;
-            }
+        if (intersection.distance == max_distance) {
+            return sky.color(rd);
         }
 
-        if (min_it_index != -1) {
-            Shape *shape = shapes[min_it_index];
+        vec3 reflection_o = ro + rd * intersection.distance;
 
-            vec3 reflection_o = ro + rd * (min_it - 1e-3);
-            vec3 reflection_d = shape->reflect(reflection_o, rd);
+        vec3 direction_to_light = light.pos - reflection_o;
+        double direction_to_light_length = length(direction_to_light);
 
-            double diffuse_light_intensity = 0;
+        direction_to_light = direction_to_light / direction_to_light_length;
 
-            for (char i = 0; i < lights.size(); ++i) {
-                diffuse_light_intensity += lights[i]->intensity * std::max(
-                        0.,
-                        dot(norm(lights[i]->pos - reflection_o), shape->normal(reflection_o)
-                    ));
-            }
+        vec3 reflection_o_shifted = reflection_o - rd * 10e-5;
 
-            return shape->material->color(reflection_o) * diffuse_light_intensity +
-                   castRay(reflection_o, reflection_d, depth + 1) * shape->material->albedo;
+        if (direction_to_light_length > getClosestIntersection(reflection_o_shifted, direction_to_light).distance) {
+            return 0;
         }
 
-        return sky.color(rd);
+        vec3 illumination(0);
+
+        vec3 normal_to_shape = intersection.shape->normal(reflection_o);
+
+        // ambient
+        illumination += intersection.shape->material->ambient;
+
+        // diffuse
+        if (intersection.shape->material->diffuse != vec3(0)) {
+            illumination += intersection.shape->material->diffuse *
+                            dot(direction_to_light, normal_to_shape);
+        }
+
+        // specular
+        if (intersection.shape->material->shininess != 0) {
+            vec3 H = norm(direction_to_light + norm(camera.pos - reflection_o));
+            illumination += intersection.shape->material->specular *
+                            pow(dot(normal_to_shape, H), intersection.shape->material->shininess);
+        }
+
+        // count reflection
+        if (intersection.shape->material->reflection == 0) {
+            return illumination;
+        }
+
+        vec3 color = castRay(
+                reflection_o_shifted,
+                intersection.shape->reflect(reflection_o, rd),
+                depth + 1
+        );
+
+        if (color == 0) {
+            return 0;
+        }
+
+        return illumination + color * intersection.shape->material->reflection;
     };
+
+    intersectionInfo getClosestIntersection(vec3 ro, vec3 rd) {
+        double min_distance = max_distance;
+        int closest_shape_index = 0;
+        double distance;
+
+        for (int i = 0; i < shapes.size(); ++i) {
+            distance = shapes[i]->intersection(ro, rd);
+
+            if (distance < 0) continue;
+            if (distance < min_distance) {
+                min_distance = distance;
+                closest_shape_index = i;
+            }
+        }
+
+        return intersectionInfo(min_distance, shapes[closest_shape_index]);
+    }
 };
 
 #endif //RAYTRACING_GRAPHICSMANAGER_H

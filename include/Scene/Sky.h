@@ -23,14 +23,10 @@ public:
         image.loadFromFile(path);
     };
 
-    Color color(vec3 rd) {
-        return Color(0.01, 0.86, 1.0);
-
-//        rd = rotation * rd;
-//
+    vec3 color(vec3 rd) {
+//        return vec3(0, 0, 0.001);
+        return vec3(0.01, 0.86, 1.0);
 //        if (rd.z == 1) return Color(1);
-//
-//        std::cout << rd.y << " " << rd.z << std::endl;
 //
 //        int x = (rd.x / (1 - rd.z) + 1) * 200;
 //        int y = (rd.y / (1 - rd.z) + 1) * 400;
